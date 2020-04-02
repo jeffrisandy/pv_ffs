@@ -1,9 +1,7 @@
 import pandas as pd
-import numpy as np
-import datetime
 
 
-class IntegrityAnalysis:
+class IntegrityAnalysis():
     """
     This class is to calculate basic function in evaluation integrity of vessel
     It includes calc : corrosion rate, remaining life, MAWP
@@ -50,7 +48,7 @@ class IntegrityAnalysis:
         else:
             return print("Please input head_type: hemispherical or ellipsoidal")
 
-            return round(t * 25.4, 4)  # convert back to mm
+        return round(t * 25.4, 4)  # convert back to mm
 
     def t_nozzle(self, DP, OD, S, E):
         """
@@ -104,6 +102,8 @@ class IntegrityAnalysis:
     def remaining_life(self, t_act, t_req, cr):
         rl = (t_act - t_req) / cr
         rl = min(rl, 100)
+        if rl < 0:
+            rl = 0
         return round(rl, 2)
 
     def mawp_shell(self, t_act, cr, S, E, oR, interval):

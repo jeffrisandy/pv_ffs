@@ -1,5 +1,4 @@
 import pandas as pd
-import numpy as np
 import datetime
 from IntegrityAnalysis import IntegrityAnalysis
 
@@ -215,6 +214,64 @@ class Head(Section):
         mawp = self.mawp_head(self.t_now, self.cr, self.S, self.E, self.OD, interval, K=self.K,
                               head_type=self.head_type)
         return round(mawp, 2)
+
+
+class Nozzle(Section):
+    def __init__(self, data, nozzleID, size, height, tNom, tNow, tPrev, S, E):
+        """
+        INPUT:
+          data = DATA dictionary
+          nozzleID = int ID of nozzle
+          size = NPS inch
+          height = inch, nozzle location height measured from top
+          tNom = mm, nominal thick
+          tNow = mm, current thick
+          tPrev = mm, previous thick
+          S = psi, all. stress
+          E = joint eff
+        """
+        # init DATA
+
+        super().__init__(data)
+
+        # init data required specific for NOZZLE
+        self.part_name = nozzleID
+        self.t_nom = tNom  # mm
+        self.t_now = tNow  # mm
+        self.t_prev = tPrev  # mm
+        self.size = size  # NPS, inch
+        self.height = height  # inch
+        self.E = E
+        self.S = S  # psi
+
+        # calc t-Req
+        self.t_req = self.calc_t_req()
+
+        # calc corrosion rate
+        self.cr_long, self.cr_short = self.calc_cr_section()
+        self.cr = self.choose_cr()
+
+        # calc remaining life
+        self.rl = self.calc_rl()
+
+    def calc_t_req(self):
+        """
+        Calc t required for tubular nozzle
+        OUTPUT : a tuple of
+          t_req_cir = mm, due to cir stress / long joints
+        """
+        DP = self.DP  # psi
+        DP += 0.433 * self.height * 0.0833  # self.height in inch, so we need to convert it to feet unit
+
+        t_req = self.t_nozzle(DP, self.size, self.S, self.E)  # mm
+        return max(2.54, t_req)  # mm
+
+    def calc_mawp(self, interval=None):
+        """ return psig """
+        if not interval:
+            interval = self.interval
+        mawp = self.mawp_nozzle(self.t_now, self.cr, self.S, self.E, self.size, self.height, interval)
+        return round(mawp, 2)  # psig
 
 
 class Nozzle(Section):
