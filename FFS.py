@@ -7,6 +7,10 @@ from Vessel import *
 
 class FFS():
     def __init__(self, data):
+        print(f"""
+    =======================
+    DATA CONSTRUCTION NOTES
+    =======================""")
         self.shell = Shell(data)
         self.head1 = Head(data, label="head1")
         self.head2 = Head(data, label="head2")
@@ -72,32 +76,27 @@ class FFS():
     YEAR BUILT      = {self.shell.year_built}
     INSPECTION DATE = {self.shell.date_now}
 
-    ==SUMNMARY EVALUATION==
+    == EVALUATION SUMMARY ==
     """)
-
         print(self.to_dataframe())
-
         print("""
     ----------------
     SECTION - SHELL
     ----------------""")
         self.shell.print_summary()
-
         print(f"""
     --------------------------
     SECTION - HEAD 1 {self.head1.part_name}
     --------------------------""")
         self.head1.print_summary()
-
         print(f"""
     ------------------------------
     SECTION - HEAD 2 {self.head2.part_name}
     ------------------------------""")
         self.head2.print_summary()
-
         for k, v in self.nozzles.items():
             print(F"""
-      -------------
-      NOZZLE - {k}
-      -------------""")
+    -------------
+    NOZZLE - {k}
+    -------------""")
             v.print_summary()

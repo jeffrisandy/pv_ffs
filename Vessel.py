@@ -8,6 +8,7 @@ class Section(IntegrityAnalysis):
         # init DATA
         self.DATA = data
         self.part_name = None
+        
         # init data required
         self.t_nom = None
         self.t_now = None
@@ -101,29 +102,32 @@ class Section(IntegrityAnalysis):
 
       *Integrity*
       - Remaining life = {self.rl} years.
-      - MAWP @next inspection at interval {interval} years = {mawp}
+      - MAWP @next inspection at interval {interval} years = {mawp} psig.
+      - Part anomaly status = {self.anomaly_status(self.rl)}
 
       *Conclusion*
       """
         if self.isFit(interval):
             string += f"""
-      The {self.part_name} of the Vessel if fit for service with {interval} years interval at next inspection date in {self.rl_date(
+      The {self.part_name} of the Vessel is fit for service within {interval} years interval at the next inspection date in {self.rl_date(
                 interval)}. 
-      The MAWP is {mawp} psig which is larger than design pressure ({self.DP} psig).
+      The MAWP is {mawp} psig which is larger than the design pressure ({self.DP} psig).
       The remaining life is {self.rl} years which is due in {self.rl_date()}. 
       """
             print(string)
         else:
             string += f"""
-      The {self.part_name} of the Vessel is NOT fit for service with {interval} years interval at next inspection in {self.rl_date(
+      The {self.part_name} of the Vessel is NOT fit for service witin {interval} years interval at the next inspection in {self.rl_date(
                 interval)} 
-      The MAWP is {mawp} psig which is lower than design pressure ({self.DP} psig).
+      The MAWP is {mawp} psig which is lower than the design pressure ({self.DP} psig).
+      
+      Recommendations are staged as per proposed local procedure:
+         1. Shorten inspection interval.
+         2. Derating, if possible.
+         3. Repair.
 
-      Recommeds to shorten next inspection interval, perform repair or derating.
-
-      Below is the projection derating pressure and remaining life date. 
-
-      Derating pressure should be selected as appropriate.    
+      Below is the projection derating pressure and remaining life date.
+      Note: derating pressure should be selected as appropriate.    
         """
             print(string)
             self.derating_projection(interval=interval)
@@ -141,6 +145,13 @@ class Shell(Section):
         self.t_prev = self.DATA['t_prev_shell']
         self.E = self.DATA['E_SHELL']
         self.S = self.DATA['S_SHELL']
+
+        # suggest to use max value of current inspection if actual thick > nominal thick; skip NoneType tNow
+        if not isinstance(self.t_now, (str, type(None))):
+            if self.t_now > self.t_nom:
+                print(
+                    f"""    TML [{self.part_name}]: actual {self.t_now} > nominal thickness {self.t_nom}, use tNom={self.t_now}""")
+                self.t_nom = self.t_now
 
         # calc t-Req
         self.t_req = self.calc_t_req()
@@ -184,6 +195,13 @@ class Head(Section):
         self.L = self.DATA['L']
         self.K = self.DATA['K']
         self.head_type = self.DATA['HEAD_TYPE']
+
+        # suggest to use max value of current inspection if actual thick > nominal thick; skip NoneType tNow
+        if not isinstance(self.t_now, (str, type(None))):
+            if self.t_now > self.t_nom:
+                print(
+                    f"""    TML [{self.part_name}]: actual {self.t_now} > nominal thickness {self.t_nom}, use tNom={self.t_now}""")
+                self.t_nom = self.t_now
 
         # calc t-Req
         self.t_req = self.calc_t_req()
@@ -244,63 +262,12 @@ class Nozzle(Section):
         self.E = E
         self.S = S  # psi
 
-        # calc t-Req
-        self.t_req = self.calc_t_req()
-
-        # calc corrosion rate
-        self.cr_long, self.cr_short = self.calc_cr_section()
-        self.cr = self.choose_cr()
-
-        # calc remaining life
-        self.rl = self.calc_rl()
-
-    def calc_t_req(self):
-        """
-        Calc t required for tubular nozzle
-        OUTPUT : a tuple of
-          t_req_cir = mm, due to cir stress / long joints
-        """
-        DP = self.DP  # psi
-        DP += 0.433 * self.height * 0.0833  # self.height in inch, so we need to convert it to feet unit
-
-        t_req = self.t_nozzle(DP, self.size, self.S, self.E)  # mm
-        return max(2.54, t_req)  # mm
-
-    def calc_mawp(self, interval=None):
-        """ return psig """
-        if not interval:
-            interval = self.interval
-        mawp = self.mawp_nozzle(self.t_now, self.cr, self.S, self.E, self.size, self.height, interval)
-        return round(mawp, 2)  # psig
-
-
-class Nozzle(Section):
-    def __init__(self, data, nozzleID, size, height, tNom, tNow, tPrev, S, E):
-        """
-        INPUT:
-          data = DATA dictionary
-          nozzleID = int ID of nozzle
-          size = NPS inch
-          height = inch, nozzle location height measured from top
-          tNom = mm, nominal thick
-          tNow = mm, current thick
-          tPrev = mm, previous thick
-          S = psi, all. stress
-          E = joint eff
-        """
-        # init DATA
-
-        super().__init__(data)
-
-        # init data required specific for NOZZLE
-        self.part_name = nozzleID
-        self.t_nom = tNom  # mm
-        self.t_now = tNow  # mm
-        self.t_prev = tPrev  # mm
-        self.size = size  # NPS, inch
-        self.height = height  # inch
-        self.E = E
-        self.S = S  # psi
+        # suggest to use max value of current inspection if actual thick > nominal thick; skip NoneType tNow
+        if not isinstance(self.t_now, (str, type(None))):
+            if self.t_now > self.t_nom:
+                print(
+                    f"""    TML [{self.part_name}]: actual {self.t_now} > nominal thickness {self.t_nom}, use tNom={self.t_now}""")
+                self.t_nom = self.t_now
 
         # calc t-Req
         self.t_req = self.calc_t_req()
