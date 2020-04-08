@@ -55,7 +55,7 @@ class IntegrityAnalysis():
         Calc t required for tubular nozzle
         INPUT :
           DP = psi, design pressure
-          OD = inch, outside diamter
+          OD = inch, outside diameter
           S = psi, all. stress
           E = joint efficiency
         OUTPUT : a tuple of
@@ -100,11 +100,25 @@ class IntegrityAnalysis():
         return cr_long, cr_short
 
     def remaining_life(self, t_act, t_req, cr):
-        rl = (t_act - t_req) / cr
-        rl = min(rl, 100)
-        if rl < 0:
-            rl = 0
+        try:
+            rl = (t_act - t_req) / cr
+            rl = min(rl, 100)
+            if rl < 0:
+                rl = 0
+        except ZeroDivisionError:
+            rl = 100
         return round(rl, 2)
+
+    def anomaly_status(self, rl):
+        if rl <= 0:
+            ano_st = "RED"
+        elif rl < 6:
+            ano_st = "ORANGE"
+        elif rl < 10:
+            ano_st = "YELLOW"
+        else:
+            ano_st = "GREEN"
+        return ano_st
 
     def mawp_shell(self, t_act, cr, S, E, oR, interval):
         """
