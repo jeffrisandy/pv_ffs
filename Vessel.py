@@ -219,11 +219,11 @@ class Head(Section):
         OUTPUT : a tuple of
           t_req_cir = mm
         """
-        DP = self.DP
-        if "bottom" in self.part_name.lower():
-            DP += 0.433 * self.L * 0.0833  # self.L in inch, so we need to convert it to feet unit
 
-        t_req = self.t_shell(DP, self.OD, self.S, self.E)
+        if "bottom" in self.part_name.lower():
+            self.DP += 0.433 * self.L * 0.0833  # self.L in inch, so we need to convert it to feet unit
+
+        t_req = self.t_shell(self.DP, self.OD, self.S, self.E)
         return t_req
 
     def calc_mawp(self, interval=None):
