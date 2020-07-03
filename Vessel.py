@@ -109,7 +109,7 @@ class Section(IntegrityAnalysis):
       """
         if self.isFit(interval):
             string += f"""
-      The {self.part_name} of the Vessel is fit for service within {interval} years interval at the next inspection date in {self.rl_date(
+      The {self.part_name} - {self.cml_name} of the Vessel is fit for service within {interval} years interval at the next inspection date in {self.rl_date(
                 interval)}. 
       The MAWP is {mawp} psig which is larger than the design pressure ({self.DP} psig).
       The remaining life is {self.rl} years which is due in {self.rl_date()}. 
@@ -117,7 +117,7 @@ class Section(IntegrityAnalysis):
             print(string)
         else:
             string += f"""
-      The {self.part_name} of the Vessel is NOT fit for service witin {interval} years interval at the next inspection in {self.rl_date(
+      The {self.part_name} - {self.cml_name} of the Vessel is NOT fit for service witin {interval} years interval at the next inspection in {self.rl_date(
                 interval)} 
       The MAWP is {mawp} psig which is lower than the design pressure ({self.DP} psig).
       
@@ -134,15 +134,16 @@ class Section(IntegrityAnalysis):
 
 
 class Shell(Section):
-    def __init__(self, data):
+    def __init__(self, data, name, tNow, tPrev):
         # init DATA
         super().__init__(data)
 
         # init data required specific for SHELL
-        self.part_name = "Shell"
+        self.part_name = "SHEL"
+        self.cml_name = name
         self.t_nom = self.DATA['t_nom_shell']
-        self.t_now = self.DATA['t_now_shell']
-        self.t_prev = self.DATA['t_prev_shell']
+        self.t_now = tNow
+        self.t_prev = tPrev
         self.E = self.DATA['E_SHELL']
         self.S = self.DATA['S_SHELL']
 
@@ -150,7 +151,7 @@ class Shell(Section):
         if not isinstance(self.t_now, (str, type(None))):
             if self.t_now > self.t_nom:
                 print(
-                    f"""    TML [{self.part_name}]: actual {self.t_now} > nominal thickness {self.t_nom}, use tNom={self.t_now}""")
+                    f"""    TML [{self.cml_name}]: actual {self.t_now} > nominal thickness {self.t_nom}, use tNom={self.t_now}""")
                 self.t_nom = self.t_now
 
         # calc t-Req
@@ -170,7 +171,8 @@ class Shell(Section):
           t_req_cir = mm, due to cir stress / long joints
         """
 
-        return self.t_shell(self.DP, self.OD, self.S, self.E)
+        t_req = self.t_shell(self.DP, self.OD, self.S, self.E)
+        return max(2.54, t_req) 
 
     def calc_mawp(self, interval=None):
         if not interval:
@@ -180,27 +182,29 @@ class Shell(Section):
 
 
 class Head(Section):
-    def __init__(self, data, label="head1"):
+    def __init__(self, data, name, tNow, tPrev, head_area, label="head1"):
         # init DATA
 
         super().__init__(data)
 
         # init data required specific for HEAD
         self.part_name = self.DATA[f'{label}_name']
+        self.cml_name = name
         self.t_nom = self.DATA[f't_nom_head']
-        self.t_now = self.DATA[f't_now_{label}']
-        self.t_prev = self.DATA[f't_prev_{label}']
+        self.t_now = tNow
+        self.t_prev = tPrev
         self.E = self.DATA['E_HEAD']
         self.S = self.DATA['S_HEAD']
         self.L = self.DATA['L']
         self.K = self.DATA['K']
         self.head_type = self.DATA['HEAD_TYPE']
+        self.head_area = head_area
 
         # suggest to use max value of current inspection if actual thick > nominal thick; skip NoneType tNow
         if not isinstance(self.t_now, (str, type(None))):
             if self.t_now > self.t_nom:
                 print(
-                    f"""    TML [{self.part_name}]: actual {self.t_now} > nominal thickness {self.t_nom}, use tNom={self.t_now}""")
+                    f"""    TML [{self.cml_name}]: actual {self.t_now} > nominal thickness {self.t_nom}, use tNom={self.t_now}""")
                 self.t_nom = self.t_now
 
         # calc t-Req
@@ -222,15 +226,35 @@ class Head(Section):
 
         if "bottom" in self.part_name.lower():
             self.DP += 0.433 * self.L * 0.0833  # self.L in inch, so we need to convert it to feet unit
-
-        t_req = self.t_shell(self.DP, self.OD, self.S, self.E)
-        return t_req
+        
+        if self.head_type.lower() == "ellipsoidal":
+            if self.head_area.lower() == "knuckle":
+                t_req = self.t_head(self.DP, self.OD, self.S, self.E, K=self.K, head_type=self.head_type)
+            else:
+                t_req = self.t_head(self.DP, self.OD, self.S, self.E, K=self.K, head_type="hemispherical")
+        else:
+            t_req = self.t_head(self.DP, self.OD, self.S, self.E, K=self.K, head_type=self.head_type)
+         
+        return max(2.54, t_req) 
 
     def calc_mawp(self, interval=None):
         if not interval:
             interval = self.interval
-        mawp = self.mawp_head(self.t_now, self.cr, self.S, self.E, self.OD, interval, K=self.K,
+        
+        
+        if self.head_type.lower() == "ellipsoidal":
+            if self.head_area.lower() == "knuckle":
+                mawp = self.mawp_head(self.t_now, self.cr, self.S, self.E, self.OD, interval, K=self.K,
                               head_type=self.head_type)
+            else:
+                mawp = self.mawp_head(self.t_now, self.cr, self.S, self.E, self.OD, interval, K=self.K,
+                              head_type="hemispherical")
+        else:
+            mawp = self.mawp_head(self.t_now, self.cr, self.S, self.E, self.OD, interval, K=self.K,
+                              head_type=self.head_type)
+        if "bottom" in self.part_name.lower():
+            mawp -= 0.433 * self.L * 0.0833  # self.L in inch, so we need to convert it to feet unit
+            
         return round(mawp, 2)
 
 
@@ -253,7 +277,8 @@ class Nozzle(Section):
         super().__init__(data)
 
         # init data required specific for NOZZLE
-        self.part_name = nozzleID
+        self.part_name = "NOZZLES"
+        self.cml_name = nozzleID
         self.t_nom = tNom  # mm
         self.t_now = tNow  # mm
         self.t_prev = tPrev  # mm
@@ -266,7 +291,7 @@ class Nozzle(Section):
         if not isinstance(self.t_now, (str, type(None))):
             if self.t_now > self.t_nom:
                 print(
-                    f"""    TML [{self.part_name}]: actual {self.t_now} > nominal thickness {self.t_nom}, use tNom={self.t_now}""")
+                    f"""    TML [{self.cml_name}]: actual {self.t_now} > nominal thickness {self.t_nom}, use tNom={self.t_now}""")
                 self.t_nom = self.t_now
 
         # calc t-Req

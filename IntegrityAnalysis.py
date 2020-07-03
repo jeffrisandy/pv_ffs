@@ -1,6 +1,9 @@
 import pandas as pd
 
 
+import pandas as pd
+
+
 class IntegrityAnalysis():
     """
     This class is to calculate basic function in evaluation integrity of vessel
@@ -28,7 +31,7 @@ class IntegrityAnalysis():
 
         return round(t_circ, 4)
 
-    def t_head(DP, OD, S, E, K=1, head_type="ellipsoidal"):
+    def t_head(self, DP, OD, S, E, K=1, head_type="ellipsoidal"):
         """
         Calc t required for head ellips and hemis
         INPUT :
@@ -40,7 +43,7 @@ class IntegrityAnalysis():
           t_req = mm, due to cir stress / long joints
         """
         if head_type.lower() == "ellipsoidal":
-            t = DP * OD * 1
+            t = DP * OD * K
             t /= (2 * S * E) + (2 * DP * (K - 0.1))
         elif head_type.lower() == "hemispherical":
             t = DP * OD * 0.5
@@ -196,3 +199,4 @@ class IntegrityAnalysis():
         t_pred = t_act - (2 * cr * interval)
         mawp = 2 * S * E * t_pred / OD
         return mawp
+

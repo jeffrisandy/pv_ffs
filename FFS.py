@@ -5,16 +5,44 @@ from IntegrityAnalysis import IntegrityAnalysis
 from Vessel import *
 
 
+
 class FFS():
     def __init__(self, data):
         print(f"""
     =======================
     DATA CONSTRUCTION NOTES
     =======================""")
-        self.shell = Shell(data)
-        self.head1 = Head(data, label="head1")
-        self.head2 = Head(data, label="head2")
-
+        self.DATA = data
+        
+        # init Shell
+        shell_name = data['shell_name']
+        shell_tNow = data['t_now_shell']
+        shell_tPrev = data['t_prev_shell']
+        self.shells = dict()
+        shell_zip = zip(shell_name, shell_tNow, shell_tPrev)
+        for name, tNow, tPrev in list(shell_zip):
+            self.shells[name] = Shell(data, name, tNow, tPrev)
+            
+         # init head1 = top or left head
+        head_name1 = data['head_cml_name1']
+        head_tNow1 = data['t_now_head1']
+        head_tPrev1 = data['t_prev_head1']
+        head_area1 = data['head_area1']
+        self.heads1 = dict()
+        head_zip1 = zip(head_name1, head_tNow1, head_tPrev1, head_area1)
+        for name, tNow, tPrev, head_area in list(head_zip1):
+            self.heads1[name] = Head(data, name, tNow, tPrev, head_area, label="head1")
+                          
+       # init head2 = bottom or right head
+        head_name2 = data['head_cml_name2']
+        head_tNow2 = data['t_now_head2']
+        head_tPrev2 = data['t_prev_head2']
+        head_area2 = data['head_area2']
+        self.heads2 = dict()
+        head_zip2 = zip(head_name2, head_tNow2, head_tPrev2, head_area2)
+        for name, tNow, tPrev, head_area in list(head_zip2):
+            self.heads2[name] = Head(data, name, tNow, tPrev, head_area, label="head2")
+        
         # init nozzles
         nozzleIDS = data['nozzles_name']
         sizes = data['nozzles_size']
@@ -34,10 +62,18 @@ class FFS():
     def to_dataframe(self):
         rls = []
         mawps = []
-        labels = []
+        labels = [] #section
+        cml_names = []
         isFits = []
 
-        sections = [self.shell, self.head1, self.head2]
+        sections = []
+        
+        for k, v in self.shells.items():
+            sections.append(v)
+        for k, v in self.heads1.items():
+            sections.append(v)
+        for k, v in self.heads2.items():
+            sections.append(v)
         for k, v in self.nozzles.items():
             sections.append(v)
         for section in sections:
@@ -48,10 +84,12 @@ class FFS():
             rls.append(rl)
             mawps.append(mawp)
             labels.append(label)
+            cml_names.append(section.cml_name)
             isFits.append(fit)
 
         df = pd.DataFrame()
         df['Section'] = labels
+        df['CML'] = cml_names
         df['RL'] = rls
         df['MAWP'] = mawps
         df['is_Fit?'] = isFits
@@ -64,17 +102,20 @@ class FFS():
     INTEGRITY EVALUATION
     ====================
 
-    NAME            = {self.shell.DATA['NAME']}
-    TAG NO          = {self.shell.DATA['TAG_NO']}
-    AREA            = {self.shell.DATA['AREA']}
-    ORIENTATION     = {self.head1.DATA['PV_ORIENTATION']}
-    HEAD TYPE       = {self.head1.DATA['HEAD_TYPE']}
-    OUTSIDE DIA     = {self.shell.OD} inch
-    LENGTH          = {self.head1.L} inch
-    DESIGN PRESSURE = {self.shell.DP} psig
-    DESIGN TEMP     = {self.shell.DATA['DT']} F
-    YEAR BUILT      = {self.shell.year_built}
-    INSPECTION DATE = {self.shell.date_now}
+    NAME            = {self.DATA['NAME']}
+    EQ NO           = {self.DATA['EQ_NO']}
+    TAG NO          = {self.DATA['TAG_NO']}
+    AREA            = {self.DATA['AREA']}
+    ORIENTATION     = {self.DATA['PV_ORIENTATION']}
+    HEAD TYPE       = {self.DATA['HEAD_TYPE']}
+    OUTSIDE DIA     = {self.DATA['OD']} inch
+    LENGTH          = {self.DATA['L']} inch
+    DESIGN PRESSURE = {self.DATA['DP']} psig
+    DESIGN TEMP     = {self.DATA['DT']} F
+    MATERIAL        = {self.DATA['MATERIAL']}
+    RT              = {self.DATA['RT']}
+    YEAR BUILT      = {self.DATA['YEAR_BUILT']}
+    INSPECTION DATE = {self.DATA['insp_date_now']}
 
     == EVALUATION SUMMARY ==
     """)
@@ -83,20 +124,38 @@ class FFS():
     ----------------
     SECTION - SHELL
     ----------------""")
-        self.shell.print_summary()
+        for k,v in self.shells.items():
+            print(f"""
+    -------------
+    SHELL - {k}
+    -------------""")
+            v.print_summary()
+        
         print(f"""
     --------------------------
-    SECTION - HEAD 1 {self.head1.part_name}
+    SECTION - HEAD 1 {self.DATA['head1_name']}
     --------------------------""")
-        self.head1.print_summary()
+        for k,v in self.heads1.items():
+            print(f"""
+    -------------
+    HEAD 1 - {self.DATA['head1_name']} - {k}
+    -------------""")
+            v.print_summary()
+ 
         print(f"""
     ------------------------------
-    SECTION - HEAD 2 {self.head2.part_name}
+    SECTION - HEAD 2 {self.DATA['head2_name']}
     ------------------------------""")
-        self.head2.print_summary()
-        for k, v in self.nozzles.items():
-            print(F"""
+        for k,v in self.heads2.items():
+            print(f"""
     -------------
-    NOZZLE - {k}
+    HEAD 2 - {self.DATA['head2_name']} - {k}
+    -------------""")
+            v.print_summary()
+            
+        for k, v in self.nozzles.items():
+            print(f"""
+    -------------
+    NOZZLE 2 - {k}
     -------------""")
             v.print_summary()
